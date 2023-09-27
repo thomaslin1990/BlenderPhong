@@ -12,19 +12,31 @@ scene = D.scenes['Scene']
 # where we fix the "r" of (r, theta, phi) in spherical coordinate system.
 
 # 5 orientations: front, right, back, left, top
-cameras = [
-    (60, 0), (60, 90), (60, 180), (60, 270),
-    (0, 0)
-]
+# cameras = [
+#     (60, 0), (60, 90), (60, 180), (60, 270),
+#     (0, 0)
+# ]
 
 # 12 orientations around the object with 30-deg elevation
 # cameras = [(60, i) for i in range(0, 360, 30)]
 
+# 20 orientations around the object
+def dodecahedron_vertices():
+    """Return the vertices of a unit dodecahedron."""
+    phi = (1 + 5 ** 0.5) / 2.0  # Golden ratio
+    return [
+        (1, 1, 1), (-1, 1, 1), (-1, -1, 1), (1, -1, 1),
+        (0, 1/phi, phi), (0, 1/phi, -phi), (0, -1/phi, phi), (0, -1/phi, -phi),
+        (1/phi, phi, 0), (1/phi, -phi, 0), (-1/phi, phi, 0), (-1/phi, -phi, 0),
+        (phi, 0, 1/phi), (-phi, 0, 1/phi), (phi, 0, -1/phi), (-phi, 0, -1/phi),
+        (1, 1, -1), (-1, 1, -1), (-1, -1, -1), (1, -1, -1)
+    ]
+cameras = dodecahedron_vertices()
 render_setting = scene.render
 
 # output image size = (W, H)
-w = 500
-h = 500
+w = 224
+h = 224
 render_setting.resolution_x = w
 render_setting.resolution_y = h
 
@@ -41,11 +53,10 @@ def main():
     image_dir = argv[1]
 
     # blender has no native support for off files
-    install_off_addon()
+    # install_off_addon()
 
     init_camera()
     fix_camera_to_origin()
-
     do_model(model, image_dir)
 
 
@@ -69,7 +80,9 @@ def init_camera():
     cam = D.objects['Camera']
     # select the camera object
     scene.objects.active = cam
+    # bpy.context.view_layer.objects.active = cam
     cam.select = True
+    # cam.select_set(True)
 
     # set the rendering mode to orthogonal and scale
     C.object.data.type = 'ORTHO'
@@ -91,7 +104,10 @@ def fix_camera_to_origin():
 
     cam = D.objects['Camera']
     scene.objects.active = cam
+    # bpy.context.view_layer.objects.active = cam
     cam.select = True
+    # cam.select_set(True)
+
 
     if 'Track To' not in cam.constraints:
         bpy.ops.object.constraint_add(type='TRACK_TO')
@@ -107,7 +123,8 @@ def do_model(path, image_dir):
     normalize_model(name)
     image_subdir = os.path.join(image_dir, name)
     for i, c in enumerate(cameras):
-        move_camera(c)
+        # move_camera(c)
+        move_camera_20(c)
         render()
         save(image_subdir, '%s.%d' % (name, i))
 
@@ -142,8 +159,10 @@ def delete_model(name):
     for ob in scene.objects:
         if ob.type == 'MESH' and ob.name.startswith(name):
             ob.select = True
+            # ob.select_set(True)
         else:
             ob.select = False
+            # ob.select_set(False)
     bpy.ops.object.delete()
 
 
@@ -172,6 +191,15 @@ def move_camera(coord):
     loc_x = r * math.sin(theta) * math.cos(phi)
     loc_y = r * math.sin(theta) * math.sin(phi)
     loc_z = r * math.cos(theta)
+
+    D.objects['Camera'].location = (loc_x, loc_y, loc_z)
+
+
+def move_camera_20(coord):
+    r = 3.
+    loc_x = r * coord[0]
+    loc_y = r * coord[1]
+    loc_z = r * coord[2]
 
     D.objects['Camera'].location = (loc_x, loc_y, loc_z)
 
